@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Juego del Ovillo Virtual — Plan Ceibal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10142B;
+    --bg-panel: #171C3A;
+    --bg-panel-2: #1E2448;
+    --thread: #E63946;
+    --thread-glow: #ff8a80;
+    --origin: #4FD1C5;
+    --dest: #FF9F5B;
+    --router: #F2B84B;
+    --router-broken: #514066;
+    --cream: #F5F1E8;
+    --cream-dim: #C7C4DA;
+    --edge: #333a63;
+    --success: #7FE0A7;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(ellipse at 20% -10%, #1b2050 0%, var(--bg) 55%);
+    color: var(--cream);
+    font-family:'Nunito', sans-serif;
+    min-height:100vh;
+    padding: 28px 20px 60px;
+  }
+  .wrap{ max-width: 1180px; margin: 0 auto; }
+
+  header{ text-align:center; margin-bottom: 22px; }
+  .eyebrow{
+    font-family:'Nunito',sans-serif; font-weight:800; letter-spacing:.14em;
+    text-transform:uppercase; font-size:12px; color: var(--router);
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .eyebrow::before, .eyebrow::after{ content:""; height:1px; width:36px; background:var(--edge); }
+  h1{
+    font-family:'Fredoka', sans-serif; font-weight:700; font-size: clamp(26px,4vw,40px);
+    margin: 10px 0 6px; color: var(--cream);
+  }
+  h1 span{ color: var(--thread); }
+  .subtitle{ color: var(--cream-dim); font-size:15px; max-width:640px; margin:0 auto; }
+
+  .stage-tabs{
+    display:flex; justify-content:center; gap:10px; margin: 22px 0 18px;
+  }
+  .stage-tab{
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:14px;
+    background: var(--bg-panel); color: var(--cream-dim); border:1px solid var(--edge);
+    padding: 10px 18px; border-radius: 999px; cursor:pointer; transition: all .18s ease;
+  }
+  .stage-tab.active{
+    background: var(--thread); color: #1a0f10; border-color: var(--thread);
+    box-shadow: 0 0 0 4px rgba(230,57,70,.18);
+  }
+  .stage-tab:not(.active):hover{ border-color:#5c6398; color:var(--cream); }
+
+  .layout{
+    display:grid; grid-template-columns: 1fr 300px; gap: 18px;
+  }
+  @media (max-width: 880px){ .layout{ grid-template-columns: 1fr; } }
+
+  .panel{
+    background: var(--bg-panel); border:1px solid var(--edge); border-radius: 18px;
+    padding: 16px;
+  }
+
+  .graph-panel{ position:relative; overflow:hidden; }
+  svg{ width:100%; height:auto; display:block; touch-action: none; }
+
+  .node-label{ font-family:'Nunito',sans-serif; font-weight:800; font-size:11px; fill: var(--bg); pointer-events:none; user-select:none;}
+  .node-label.light{ fill:#1a1030; }
+  .node-tag{ font-family:'Nunito',sans-serif; font-weight:700; font-size:10px; fill: var(--cream-dim); pointer-events:none; user-select:none; }
+
+  .node-circle{ cursor:pointer; transition: filter .15s ease; }
+  .node-circle:hover{ filter: brightness(1.15); }
+  .node-x{ pointer-events:none; }
+
+  .toast{
+    position:absolute; left:50%; bottom:14px; transform: translateX(-50%);
+    background: var(--bg-panel-2); border:1px solid var(--edge); padding: 10px 18px;
+    border-radius: 12px; font-weight:700; font-size:14px; opacity:0; transition: opacity .25s ease, transform .25s ease;
+    pointer-events:none; white-space:nowrap; max-width: 92%; text-align:center;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(-4px); }
+  .toast.ok{ color: var(--success); border-color: rgba(127,224,167,.4); }
+  .toast.bad{ color: var(--thread-glow); border-color: rgba(230,57,70,.4); }
+
+  .side{ display:flex; flex-direction:column; gap: 14px; }
+
+  .stat-row{ display:flex; justify-content:space-between; align-items:baseline; padding: 8px 0; border-bottom:1px dashed var(--edge); }
+  .stat-row:last-child{ border-bottom:none; }
+  .stat-label{ font-size:12.5px; color: var(--cream-dim); font-weight:700; }
+  .stat-value{ font-family:'Fredoka',sans-serif; font-size:20px; color:var(--router); }
+
+  .btn{
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:14px;
+    border:none; border-radius: 12px; padding: 12px 14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    transition: transform .12s ease, filter .15s ease;
+  }
+  .btn:active{ transform: scale(.97); }
+  .btn-primary{ background: var(--thread); color:#1a0f10; }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-secondary{ background: var(--bg-panel-2); color: var(--cream); border:1px solid var(--edge); }
+  .btn-secondary:hover{ border-color:#5c6398; }
+  .btn-row{ display:flex; gap:8px; }
+  .btn-row .btn{ flex:1; }
+
+  .question-box{
+    background: linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel));
+    border:1px solid var(--edge); border-radius: 14px; padding: 16px;
+  }
+  .question-eyebrow{ font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color: var(--origin); margin-bottom:8px;}
+  .question-text{ font-family:'Fredoka',sans-serif; font-size:16px; line-height:1.4; color: var(--cream); }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:14px; margin-top:16px; justify-content:center; font-size:12.5px; color: var(--cream-dim); }
+  .legend-item{ display:flex; align-items:center; gap:6px; }
+  .dot{ width:12px; height:12px; border-radius:50%; display:inline-block; }
+
+  .hint{ font-size:12px; color: var(--cream-dim); text-align:center; margin-top:10px; }
+  .count-controls{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .count-btn{
+    width:36px; height:36px; border-radius:10px; border:1px solid var(--edge);
+    background: var(--bg-panel-2); color:var(--cream); font-size:18px; cursor:pointer; font-weight:800;
+  }
+  .count-btn:hover{ border-color:#5c6398; }
+  .count-val{ font-family:'Fredoka',sans-serif; font-size:18px; color:var(--router); min-width:60px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Aula Compartida · Pensamiento Computacional</div>
+    <h1>🧶 El Juego del <span>Ovillo</span> Virtual</h1>
+    <p class="subtitle">La misma dinámica del ovillo de lana, pero para hacer en videollamada: cada nodo es un/a compañero/a, y el hilo rojo muestra por dónde viaja el Mensaje.</p>
+  </header>
+
+  <div class="stage-tabs">
+    <button class="stage-tab active" data-stage="1">1️⃣ Escalabilidad</button>
+    <button class="stage-tab" data-stage="2">2️⃣ Robustez</button>
+  </div>
+
+  <div class="layout">
+    <div class="panel graph-panel">
+      <svg id="graph" viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <div class="stat-row">
+          <span class="stat-label">Nodos totales</span>
+          <span class="stat-value" id="statTotal">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Routers caídos</span>
+          <span class="stat-value" id="statBroken">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Último envío: routers visitados</span>
+          <span class="stat-value" id="statHops">—</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="count-controls">
+          <button class="count-btn" id="minusBtn">−</button>
+          <div>
+            <div class="count-val" id="countVal">6</div>
+            <div class="hint" style="margin-top:2px;">routers en la red</div>
+          </div>
+          <button class="count-btn" id="plusBtn">+</button>
+        </div>
+      </div>
+
+      <div class="panel" style="gap:10px; display:flex; flex-direction:column;">
+        <button class="btn btn-primary" id="sendBtn">📩 Enviar Mensaje</button>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="regenBtn">🔀 Nueva red</button>
+          <button class="btn btn-secondary" id="repairBtn">♻️ Reparar todos</button>
+        </div>
+      </div>
+
+      <div class="question-box">
+        <div class="question-eyebrow" id="stageLabel">Etapa 1 · Escalabilidad</div>
+        <div class="question-text" id="questionText">¿Quién decide cada paso? Enviemos el Mensaje y veamos qué camino elige la red.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="dot" style="background:var(--origin)"></span> Origen (vos)</span>
+    <span class="legend-item"><span class="dot" style="background:var(--dest)"></span> Destino (tu amigo/a)</span>
+    <span class="legend-item"><span class="dot" style="background:var(--router)"></span> Router (compañero/a)</span>
+    <span class="legend-item"><span class="dot" style="background:var(--router-broken)"></span> Router caído</span>
+    <span class="legend-item">🧵 Hilo = camino del Mensaje</span>
+  </div>
+  <p class="hint" id="dynamicHint">🟡 Etapa 1 activa: usá los botones + / − para agregar o quitar routers de la red, y mandá el Mensaje para ver cómo cambia el camino.</p>
+
+</div>
+
+<script>
+(function(){
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById('graph');
+  const W = 900, H = 500;
+  const MARGIN = 55;
+
+  let routerCount = 6;
+  let nodes = []; // {id, x, y, type, broken}
+  let edges = []; // [id1, id2]
+  let sending = false;
+
+  const stageLabel = document.getElementById('stageLabel');
+  const questionText = document.getElementById('questionText');
+  let stage = 1;
+
+  const stage1Questions = [
+    "¿Quién es el compañero/a que envía el Mensaje? Elegimos el nodo de Origen.",
+    "¿A quién se lo pasa? ¿Por qué eligió ese camino y no otro?",
+    "¿Llegó finalmente al Destino? ¿Por cuántos routers pasó?",
+    "Si agregamos más routers a la red, ¿el Mensaje sigue el mismo itinerario?",
+    "¿Fue difícil sumar nodos nuevos a la red? ¿Qué tuvo que pasar para que siguiera funcionando?"
+  ];
+  const stage2Questions = [
+    "Rompan uno o dos routers haciendo clic sobre ellos. ¿Qué creen que va a pasar?",
+    "¿Llegó a destino el Mensaje con algunos routers caídos?",
+    "¿Qué sucede si se rompe justo el único camino posible?",
+    "¿Por qué Internet está diseñada para buscar caminos alternativos?",
+    "¿Cuántos routers 'caídos' se necesitan para que el Mensaje se pierda del todo?"
+  ];
+  let qIndex = 0;
+
+  function cycleQuestion(){
+    const bank = stage === 1 ? stage1Questions : stage2Questions;
+    questionText.textContent = bank[qIndex % bank.length];
+    qIndex++;
+  }
+
+  function updateControlsForStage(){
+    const plusBtn = document.getElementById('plusBtn');
+    const minusBtn = document.getElementById('minusBtn');
+    const hint = document.getElementById('dynamicHint');
+    if(stage === 1){
+      plusBtn.disabled = false; minusBtn.disabled = false;
+      plusBtn.style.opacity = '1'; minusBtn.style.opacity = '1';
+      hint.textContent = '🟡 Etapa 1 activa: usá los botones + / − para agregar o quitar routers de la red, y mandá el Mensaje para ver cómo cambia el camino.';
+    } else {
+      plusBtn.style.opacity = '.4'; minusBtn.style.opacity = '.4';
+      hint.textContent = '🔴 Etapa 2 activa: hacé clic en cualquier router para "romperlo" y mandá el Mensaje. ¿Igual llega a destino?';
+    }
+  }
+
+  document.querySelectorAll('.stage-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.stage-tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      stage = parseInt(tab.dataset.stage,10);
+      stageLabel.textContent = stage === 1 ? "Etapa 1 · Escalabilidad" : "Etapa 2 · Robustez";
+      qIndex = 0;
+      cycleQuestion();
+      updateControlsForStage();
+    });
+  });
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  function buildGraph(){
+    nodes = [];
+    edges = [];
+    nodes.push({id:0, x: MARGIN, y: H/2, type:'origin', broken:false});
+    const destId = routerCount + 1;
+
+    let attempts = 0;
+    for(let i=1;i<=routerCount;i++){
+      let placed = false;
+      let tries = 0;
+      while(!placed && tries < 60){
+        tries++;
+        const x = MARGIN + 90 + Math.random()*(W - 2*MARGIN - 180);
+        const y = MARGIN + Math.random()*(H - 2*MARGIN);
+        const candidate = {id:i, x, y, type:'router', broken:false};
+        const tooClose = nodes.some(n => dist(n,candidate) < 62);
+        if(!tooClose){ nodes.push(candidate); placed = true; }
+      }
+      if(!placed){
+        nodes.push({id:i, x: MARGIN+90+Math.random()*(W-2*MARGIN-180), y: MARGIN+Math.random()*(H-2*MARGIN), type:'router', broken:false});
+      }
+    }
+    nodes.push({id:destId, x: W-MARGIN, y: H/2, type:'dest', broken:false});
+
+    const threshold = 230;
+    for(let i=0;i<nodes.length;i++){
+      for(let j=i+1;j<nodes.length;j++){
+        if(dist(nodes[i], nodes[j]) < threshold){
+          edges.push([nodes[i].id, nodes[j].id]);
+        }
+      }
+    }
+
+    ensureConnected();
+    render();
+    updateStats();
+  }
+
+  function neighborsOf(id){
+    const set = new Set();
+    edges.forEach(([a,b])=>{
+      if(a===id) set.add(b);
+      if(b===id) set.add(a);
+    });
+    return set;
+  }
+
+  function components(){
+    const visited = new Set();
+    const comps = [];
+    nodes.forEach(n=>{
+      if(visited.has(n.id)) return;
+      const comp = [];
+      const stack = [n.id];
+      visited.add(n.id);
+      while(stack.length){
+        const cur = stack.pop();
+        comp.push(cur);
+        neighborsOf(cur).forEach(nb=>{
+          if(!visited.has(nb)){ visited.add(nb); stack.push(nb); }
+        });
+      }
+      comps.push(comp);
+    });
+    return comps;
+  }
+
+  function ensureConnected(){
+    let comps = components();
+    let guard = 0;
+    while(comps.length > 1 && guard < 40){
+      guard++;
+      const [c1, c2] = comps;
+      let best = null, bestD = Infinity;
+      c1.forEach(id1=>{
+        c2.forEach(id2=>{
+          const n1 = nodes.find(n=>n.id===id1);
+          const n2 = nodes.find(n=>n.id===id2);
+          const d = dist(n1,n2);
+          if(d < bestD){ bestD = d; best = [id1,id2]; }
+        });
+      });
+      if(best) edges.push(best);
+      comps = components();
+    }
+  }
+
+  function bfsPath(startId, endId){
+    const brokenIds = new Set(nodes.filter(n=>n.broken).map(n=>n.id));
+    if(brokenIds.has(startId) || brokenIds.has(endId)) return null;
+    const visited = new Set([startId]);
+    const prev = {};
+    const queue = [startId];
+    while(queue.length){
+      const cur = queue.shift();
+      if(cur === endId) break;
+      neighborsOf(cur).forEach(nb=>{
+        if(!visited.has(nb) && !brokenIds.has(nb)){
+          visited.add(nb);
+          prev[nb] = cur;
+          queue.push(nb);
+        }
+      });
+    }
+    if(!visited.has(endId)) return null;
+    const path = [endId];
+    let cur = endId;
+    while(cur !== startId){
+      cur = prev[cur];
+      path.unshift(cur);
+    }
+    return path;
+  }
+
+  function nodeColor(n){
+    if(n.type==='origin') return 'var(--origin)';
+    if(n.type==='dest') return 'var(--dest)';
+    return n.broken ? 'var(--router-broken)' : 'var(--router)';
+  }
+
+  function render(){
+    svg.innerHTML = '';
+    const edgeGroup = document.createElementNS(svgNS,'g');
+    edges.forEach(([a,b])=>{
+      const n1 = nodes.find(n=>n.id===a);
+      const n2 = nodes.find(n=>n.id===b);
+      const line = document.createElementNS(svgNS,'line');
+      line.setAttribute('x1', n1.x); line.setAttribute('y1', n1.y);
+      line.setAttribute('x2', n2.x); line.setAttribute('y2', n2.y);
+      line.setAttribute('stroke', 'var(--edge)');
+      line.setAttribute('stroke-width', '2');
+      edgeGroup.appendChild(line);
+    });
+    svg.appendChild(edgeGroup);
+
+    const threadGroup = document.createElementNS(svgNS,'g');
+    threadGroup.setAttribute('id','threadGroup');
+    svg.appendChild(threadGroup);
+
+    const nodeGroup = document.createElementNS(svgNS,'g');
+    nodes.forEach(n=>{
+      const g = document.createElementNS(svgNS,'g');
+      const r = n.type==='router' ? 20 : 26;
+      const circle = document.createElementNS(svgNS,'circle');
+      circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', r);
+      circle.setAttribute('fill', nodeColor(n));
+      circle.setAttribute('class','node-circle');
+      circle.setAttribute('id', 'node-'+n.id);
+      if(n.type==='router'){
+        circle.addEventListener('click', ()=>{
+          if(sending) return;
+          if(stage !== 2){
+            showToast('🔒 Para romper routers, cambiá a la pestaña "Etapa 2 · Robustez".', false);
+            return;
+          }
+          n.broken = !n.broken;
+          render();
+          updateStats();
+        });
+      }
+      g.appendChild(circle);
+
+      if(n.broken){
+        const x1 = document.createElementNS(svgNS,'line');
+        x1.setAttribute('x1', n.x-9); x1.setAttribute('y1', n.y-9);
+        x1.setAttribute('x2', n.x+9); x1.setAttribute('y2', n.y+9);
+        x1.setAttribute('stroke','#1a0f10'); x1.setAttribute('stroke-width','3'); x1.setAttribute('class','node-x');
+        const x2 = document.createElementNS(svgNS,'line');
+        x2.setAttribute('x1', n.x-9); x2.setAttribute('y1', n.y+9);
+        x2.setAttribute('x2', n.x+9); x2.setAttribute('y2', n.y-9);
+        x2.setAttribute('stroke','#1a0f10'); x2.setAttribute('stroke-width','3'); x2.setAttribute('class','node-x');
+        g.appendChild(x1); g.appendChild(x2);
+      } else {
+        const label = document.createElementNS(svgNS,'text');
+        label.setAttribute('x', n.x); label.setAttribute('y', n.y+4);
+        label.setAttribute('text-anchor','middle');
+        label.setAttribute('class','node-label');
+        label.textContent = n.type==='origin' ? '🙂' : n.type==='dest' ? '🎯' : (n.id);
+        g.appendChild(label);
+      }
+
+      const tag = document.createElementNS(svgNS,'text');
+      tag.setAttribute('x', n.x); tag.setAttribute('y', n.y + r + 16);
+      tag.setAttribute('text-anchor','middle');
+      tag.setAttribute('class','node-tag');
+      tag.textContent = n.type==='origin' ? 'Vos' : n.type==='dest' ? 'Destino' : 'Router';
+      g.appendChild(tag);
+
+      nodeGroup.appendChild(g);
+    });
+    svg.appendChild(nodeGroup);
+  }
+
+  function updateStats(){
+    document.getElementById('statTotal').textContent = nodes.length;
+    document.getElementById('statBroken').textContent = nodes.filter(n=>n.broken).length;
+    document.getElementById('countVal').textContent = routerCount;
+  }
+
+  function showToast(msg, ok){
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (ok ? 'ok' : 'bad');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>{ toast.classList.remove('show'); }, 3200);
+  }
+
+  function highlightNode(id, on){
+    const el = document.getElementById('node-'+id);
+    if(el) el.style.filter = on ? 'drop-shadow(0 0 10px var(--thread-glow)) brightness(1.25)' : '';
+  }
+
+  async function animateMessage(){
+    if(sending) return;
+    sending = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    const originId = 0;
+    const destId = routerCount + 1;
+    const path = bfsPath(originId, destId);
+    const threadGroup = document.getElementById('threadGroup');
+    threadGroup.innerHTML = '';
+
+    if(!path){
+      showToast('🚫 ¡Mensaje perdido! No hay camino disponible hasta el destino.', false);
+      document.getElementById('statHops').textContent = '—';
+      sending = false;
+      document.getElementById('sendBtn').disabled = false;
+      return;
+    }
+
+    highlightNode(originId, true);
+    for(let i=0;i<path.length-1;i++){
+      const n1 = nodes.find(n=>n.id===path[i]);
+      const n2 = nodes.find(n=>n.id===path[i+1]);
+      await animateSegment(n1, n2, threadGroup);
+      highlightNode(path[i], false);
+      highlightNode(path[i+1], true);
+    }
+    highlightNode(destId, false);
+
+    const hops = path.length - 2; // routers visitados, sin contar origen/destino
+    document.getElementById('statHops').textContent = Math.max(hops,0);
+    showToast('✅ ¡Mensaje entregado! Pasó por ' + Math.max(hops,0) + ' router(s).', true);
+
+    sending = false;
+    document.getElementById('sendBtn').disabled = false;
+  }
+
+  function animateSegment(n1, n2, group){
+    return new Promise(resolve=>{
+      const line = document.createElementNS(svgNS,'line');
+      line.setAttribute('x1', n1.x); line.setAttribute('y1', n1.y);
+      line.setAttribute('x2', n1.x); line.setAttribute('y2', n1.y);
+      line.setAttribute('stroke', 'var(--thread)');
+      line.setAttribute('stroke-width', '4');
+      line.setAttribute('stroke-linecap','round');
+      group.appendChild(line);
+
+      const ball = document.createElementNS(svgNS,'circle');
+      ball.setAttribute('r', 8);
+      ball.setAttribute('fill', 'var(--thread)');
+      ball.setAttribute('stroke', 'var(--thread-glow)');
+      ball.setAttribute('stroke-width','2');
+      ball.setAttribute('cx', n1.x); ball.setAttribute('cy', n1.y);
+      group.appendChild(ball);
+
+      const duration = 480;
+      const start = performance.now();
+      function step(t){
+        const p = Math.min((t-start)/duration, 1);
+        const x = n1.x + (n2.x-n1.x)*p;
+        const y = n1.y + (n2.y-n1.y)*p;
+        line.setAttribute('x2', x); line.setAttribute('y2', y);
+        ball.setAttribute('cx', x); ball.setAttribute('cy', y);
+        if(p < 1){ requestAnimationFrame(step); }
+        else { ball.remove(); resolve(); }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', animateMessage);
+  document.getElementById('regenBtn').addEventListener('click', ()=>{ buildGraph(); showToast('🔀 Nueva red generada.', true); });
+  document.getElementById('repairBtn').addEventListener('click', ()=>{
+    nodes.forEach(n=> n.broken = false);
+    render();
+    updateStats();
+    showToast('♻️ Todos los routers fueron reparados.', true);
+  });
+  document.getElementById('plusBtn').addEventListener('click', ()=>{
+    if(stage !== 1){ showToast('🔒 Para agregar routers, cambiá a la pestaña "Etapa 1 · Escalabilidad".', false); return; }
+    if(routerCount < 14){ routerCount++; buildGraph(); }
+  });
+  document.getElementById('minusBtn').addEventListener('click', ()=>{
+    if(stage !== 1){ showToast('🔒 Para quitar routers, cambiá a la pestaña "Etapa 1 · Escalabilidad".', false); return; }
+    if(routerCount > 3){ routerCount--; buildGraph(); }
+  });
+
+  buildGraph();
+  cycleQuestion();
+  updateControlsForStage();
+  setInterval(cycleQuestion, 14000);
+})();
+</script>
+</body>
+</html>
